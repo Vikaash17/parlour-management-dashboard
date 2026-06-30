@@ -3,17 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-const debugEl = document.createElement('div')
-debugEl.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#333;color:#0f0;padding:12px;z-index:9999;font-size:12px;text-align:center;font-family:monospace'
-debugEl.textContent = `URL: ${supabaseUrl || 'NOT SET'} | KEY: ${supabaseAnonKey ? 'SET' : 'NOT SET'}`
-document.body.prepend(debugEl)
-
-if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
-  console.error('Missing Supabase env vars. The app will not work.')
-  const el = document.createElement('div')
-  el.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;padding:16px;z-index:9999;font-size:14px;text-align:center'
-  el.textContent = '❌ Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables and redeploy.'
-  document.body.prepend(el)
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase env vars.')
 }
 
 export const supabase = createClient(
