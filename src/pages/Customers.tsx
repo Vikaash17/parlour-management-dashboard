@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react'
+import { Plus, Pencil, ArrowLeft } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -7,10 +7,10 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { Modal } from '@/components/ui/Modal'
 import { SearchInput } from '@/components/ui/SearchInput'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Loading } from '@/components/ui/Loading'
-import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '@/services/customers'
+import { getCustomers, createCustomer, updateCustomer } from '@/services/customers'
 import { getCustomerVisits } from '@/services/visits'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { useApp } from '@/context/AppContext'
@@ -41,9 +41,7 @@ export function Customers() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
   const [editing, setEditing] = useState<Customer | null>(null)
-  const [deleting, setDeleting] = useState<Customer | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [visitHistory, setVisitHistory] = useState<Visit[]>([])
   const [saving, setSaving] = useState(false)
@@ -108,22 +106,6 @@ export function Customers() {
       loadCustomers()
     } catch {
       console.error('Failed to save customer')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function confirmDelete() {
-    if (!deleting) return
-    try {
-      setSaving(true)
-      await deleteCustomer(deleting.id)
-      setDeleteOpen(false)
-      setDeleting(null)
-      if (selectedCustomer?.id === deleting.id) setSelectedCustomer(null)
-      loadCustomers()
-    } catch {
-      console.error('Failed to delete customer')
     } finally {
       setSaving(false)
     }
@@ -226,25 +208,13 @@ export function Customers() {
                   <p className="font-medium text-gray-900">{customer.name}</p>
                   <p className="text-sm text-gray-500">{customer.mobile}</p>
                 </button>
-                <div className="flex gap-1 flex-shrink-0">
-                  <button
-                    onClick={() => openEdit(customer)}
-                    className="p-3 rounded-xl hover:bg-gray-100"
-                    aria-label="Edit customer"
-                  >
-                    <Pencil className="h-5 w-5 text-gray-500" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setDeleting(customer)
-                      setDeleteOpen(true)
-                    }}
-                    className="p-3 rounded-xl hover:bg-red-50"
-                    aria-label="Delete customer"
-                  >
-                    <Trash2 className="h-5 w-5 text-red-400" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => openEdit(customer)}
+                  className="p-3 rounded-xl hover:bg-gray-100 flex-shrink-0"
+                  aria-label="Edit customer"
+                >
+                  <Pencil className="h-5 w-5 text-gray-500" />
+                </button>
               </div>
             </Card>
           ))}
@@ -276,14 +246,6 @@ export function Customers() {
         </form>
       </Modal>
 
-      <ConfirmDialog
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={confirmDelete}
-        title="Delete Customer"
-        message={`Are you sure you want to delete ${deleting?.name}? This will also delete all their visits.`}
-        loading={saving}
-      />
     </div>
   )
 }
