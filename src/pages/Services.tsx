@@ -155,7 +155,7 @@ export function Services() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Services</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Services</h1>
           <p className="text-sm text-gray-500 mt-1">{services.length} total services</p>
         </div>
         <Button onClick={openAdd}>
@@ -178,7 +178,7 @@ export function Services() {
             <Card key={service.id}>
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{service.name}</p>
+                  <p className="font-medium text-gray-900">{service.name}</p>
                   <span className={`inline-block text-xs px-2 py-0.5 rounded-full mt-1 ${catColors[service.category] || 'bg-gray-100 text-gray-700'}`}>
                     {service.category}
                   </span>
@@ -187,7 +187,7 @@ export function Services() {
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => openEdit(service)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <button onClick={() => openEdit(service)} className="p-2 rounded-lg hover:bg-gray-100">
                     <Pencil className="h-4 w-4 text-gray-500" />
                   </button>
                   <button

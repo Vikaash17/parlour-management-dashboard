@@ -11,7 +11,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Loading } from '@/components/ui/Loading'
 import { getExpenses, createExpense, updateExpense, deleteExpense } from '@/services/expenses'
-import { formatDate, formatCurrency, getDateRange } from '@/lib/utils'
+import { formatDate, formatCurrency } from '@/lib/utils'
 import { useApp } from '@/context/AppContext'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -58,6 +58,7 @@ const periodOptions = [
   { value: 'today', label: 'Today' },
   { value: 'week', label: 'This Week' },
   { value: 'month', label: 'This Month' },
+  { value: 'custom', label: 'Custom Range' },
 ]
 
 export function Expenses() {
@@ -71,6 +72,8 @@ export function Expenses() {
   const [editing, setEditing] = useState<Expense | null>(null)
   const [deleting, setDeleting] = useState<Expense | null>(null)
   const [saving, setSaving] = useState(false)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   const {
     register,
@@ -83,14 +86,21 @@ export function Expenses() {
 
   useEffect(() => {
     loadExpenses()
-  }, [search, period])
+  }, [search, period, dateFrom, dateTo])
 
   async function loadExpenses() {
     try {
       setLoading(true)
       let data = await getExpenses(search || undefined)
 
-      if (period !== 'all') {
+      if (period === 'custom' && dateFrom && dateTo) {
+        const from = new Date(dateFrom + 'T00:00:00')
+        const to = new Date(dateTo + 'T23:59:59')
+        data = data.filter((e) => {
+          const d = new Date(e.date)
+          return d >= from && d <= to
+        })
+      } else if (period !== 'all') {
         const now = new Date()
         let from: Date
         let to: Date
@@ -174,7 +184,7 @@ export function Expenses() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Expenses</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Expenses</h1>
           <p className="text-sm text-gray-500 mt-1">
             Total: {formatCurrency(totalExpenses, settings.currency)}
           </p>
@@ -184,17 +194,41 @@ export function Expenses() {
         </Button>
       </div>
 
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <SearchInput value={search} onChange={setSearch} placeholder="Search by category or description..." />
+      <div className="space-y-3">
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <SearchInput value={search} onChange={setSearch} placeholder="Search by category or description..." />
+          </div>
+          <div className="w-36">
+            <Select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              options={periodOptions}
+            />
+          </div>
         </div>
-        <div className="w-36">
-          <Select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            options={periodOptions}
-          />
-        </div>
+        {period === 'custom' && (
+          <div className="flex gap-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">From</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-pink-400"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">To</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-pink-400"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {loading ? (

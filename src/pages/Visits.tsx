@@ -27,6 +27,7 @@ const periodOptions = [
   { value: 'today', label: 'Today' },
   { value: 'week', label: 'This Week' },
   { value: 'month', label: 'This Month' },
+  { value: 'custom', label: 'Custom Range' },
 ]
 
 export function Visits() {
@@ -38,6 +39,8 @@ export function Visits() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState<Visit | null>(null)
   const [saving, setSaving] = useState(false)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
@@ -55,14 +58,21 @@ export function Visits() {
 
   useEffect(() => {
     loadVisits()
-  }, [period])
+  }, [period, dateFrom, dateTo])
 
   async function loadVisits() {
     try {
       setLoading(true)
       let data = await getVisits()
 
-      if (period !== 'all') {
+      if (period === 'custom' && dateFrom && dateTo) {
+        const from = new Date(dateFrom + 'T00:00:00')
+        const to = new Date(dateTo + 'T23:59:59')
+        data = data.filter((v) => {
+          const d = new Date(v.created_at)
+          return d >= from && d <= to
+        })
+      } else if (period !== 'all') {
         const now = new Date()
         let from: Date
         let to: Date
@@ -254,7 +264,7 @@ export function Visits() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Visits</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Visits</h1>
           <p className="text-sm text-gray-500 mt-1">{visits.length} visits</p>
         </div>
         <Button onClick={openNewVisit}>
@@ -262,12 +272,36 @@ export function Visits() {
         </Button>
       </div>
 
-      <div className="w-44">
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="w-44">
           <Select
             value={period}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setPeriod(e.target.value)}
             options={periodOptions}
           />
+        </div>
+        {period === 'custom' && (
+          <>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">From</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-pink-400"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">To</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-pink-400"
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {loading ? (
