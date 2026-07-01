@@ -21,7 +21,7 @@ import type { Customer, Visit } from '@/types'
 
 const customerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  mobile: z.string().min(10, 'Invalid mobile number').max(15, 'Invalid mobile number'),
+  mobile: z.string().regex(/^\d{10}$/, 'Mobile number must be exactly 10 digits'),
   gender: z.string().min(1, 'Gender is required'),
   address: z.string().optional(),
   notes: z.string().optional(),
