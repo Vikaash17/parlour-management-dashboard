@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Search } from 'lucide-react'
+import { Plus, Trash2, Search, Minus, Plus as PlusIcon } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -106,6 +106,12 @@ export function Visits() {
       }
       return [...prev, { service_id: service.id, name: service.name, price: service.price }]
     })
+  }
+
+  function updateServicePrice(serviceId: string, price: number) {
+    setSelectedServices((prev) =>
+      prev.map((s) => (s.service_id === serviceId ? { ...s, price: Math.max(0, price) } : s)),
+    )
   }
 
   const totalAmount = selectedServices.reduce((sum, s) => sum + s.price, 0)
@@ -297,30 +303,62 @@ export function Visits() {
 
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-2">Services</label>
-            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+            <div className="space-y-2">
               {services.length === 0 && (
-                <p className="text-sm text-gray-400 col-span-2">No services available. Add services first.</p>
+                <p className="text-sm text-gray-400">No services available. Add services first.</p>
               )}
-              {services.map((service) => {
-                const selected = selectedServices.some((s) => s.service_id === service.id)
-                return (
-                  <button
-                    key={service.id}
-                    type="button"
-                    onClick={() => toggleService(service)}
-                    className={`text-left p-3 rounded-xl border text-sm transition-colors ${
-                      selected
-                        ? 'border-pink-400 bg-pink-50 text-pink-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <p className="font-medium">{service.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {formatCurrency(service.price, settings.currency)}
-                    </p>
-                  </button>
-                )
-              })}
+              <div className="flex flex-wrap gap-2">
+                {services.map((service) => {
+                  const selected = selectedServices.some((s) => s.service_id === service.id)
+                  return (
+                    <button
+                      key={service.id}
+                      type="button"
+                      onClick={() => toggleService(service)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        selected
+                          ? 'border-pink-400 bg-pink-50 text-pink-700'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {service.name} ({formatCurrency(service.price, settings.currency)})
+                    </button>
+                  )
+                })}
+              </div>
+              {selectedServices.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  <p className="text-xs text-gray-500 font-medium">Adjust prices if needed:</p>
+                  {selectedServices.map((s) => (
+                    <div key={s.service_id} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                      <span className="flex-1 text-sm font-medium">{s.name}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => updateServicePrice(s.service_id, s.price - 10)}
+                          className="p-1 rounded-lg hover:bg-gray-200"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <input
+                          type="number"
+                          value={s.price}
+                          onChange={(e) => updateServicePrice(s.service_id, Number(e.target.value))}
+                          className="w-20 text-center rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                          step="10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateServicePrice(s.service_id, s.price + 10)}
+                          className="p-1 rounded-lg hover:bg-gray-200"
+                        >
+                          <PlusIcon className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

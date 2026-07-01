@@ -91,6 +91,11 @@ export function Customers() {
     setModalOpen(true)
   }
 
+  async function handleEditFromProfile() {
+    if (!selectedCustomer) return
+    openEdit(selectedCustomer)
+  }
+
   async function onSubmit(data: CustomerForm) {
     try {
       setSaving(true)
@@ -140,12 +145,20 @@ export function Customers() {
           <ArrowLeft className="h-4 w-4" /> Back to Customers
         </button>
         <Card>
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold text-gray-900">{selectedCustomer.name}</h2>
-            <p className="text-sm text-gray-500">{selectedCustomer.mobile}</p>
-            <p className="text-sm text-gray-500">{selectedCustomer.gender}</p>
-            {selectedCustomer.address && <p className="text-sm text-gray-500">{selectedCustomer.address}</p>}
-            {selectedCustomer.notes && <p className="text-sm text-gray-400 italic">{selectedCustomer.notes}</p>}
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-gray-900">{selectedCustomer.name}</h2>
+              <p className="text-sm text-gray-500">{selectedCustomer.mobile}</p>
+              <p className="text-sm text-gray-500">{selectedCustomer.gender}</p>
+              {selectedCustomer.address && <p className="text-sm text-gray-500">{selectedCustomer.address}</p>}
+              {selectedCustomer.notes && <p className="text-sm text-gray-400 italic">{selectedCustomer.notes}</p>}
+            </div>
+            <button
+              onClick={handleEditFromProfile}
+              className="p-3 rounded-xl bg-pink-50 text-pink-600 hover:bg-pink-100 self-start"
+            >
+              <Pencil className="h-5 w-5" />
+            </button>
           </div>
         </Card>
         <Card>
@@ -204,27 +217,32 @@ export function Customers() {
       ) : (
         <div className="space-y-3">
           {customers.map((customer) => (
-            <Card key={customer.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => viewProfile(customer)}>
+            <Card key={customer.id}>
               <div className="flex items-center justify-between">
-                <div className="flex-1">
+                <button
+                  onClick={() => viewProfile(customer)}
+                  className="flex-1 text-left"
+                >
                   <p className="font-medium text-gray-900">{customer.name}</p>
                   <p className="text-sm text-gray-500">{customer.mobile}</p>
-                </div>
-                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                </button>
+                <div className="flex gap-1 flex-shrink-0">
                   <button
                     onClick={() => openEdit(customer)}
-                    className="p-2 rounded-lg hover:bg-gray-100"
+                    className="p-3 rounded-xl hover:bg-gray-100"
+                    aria-label="Edit customer"
                   >
-                    <Pencil className="h-4 w-4 text-gray-500" />
+                    <Pencil className="h-5 w-5 text-gray-500" />
                   </button>
                   <button
                     onClick={() => {
                       setDeleting(customer)
                       setDeleteOpen(true)
                     }}
-                    className="p-2 rounded-lg hover:bg-red-50"
+                    className="p-3 rounded-xl hover:bg-red-50"
+                    aria-label="Delete customer"
                   >
-                    <Trash2 className="h-4 w-4 text-red-400" />
+                    <Trash2 className="h-5 w-5 text-red-400" />
                   </button>
                 </div>
               </div>
