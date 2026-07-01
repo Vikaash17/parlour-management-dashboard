@@ -11,12 +11,13 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Loading } from '@/components/ui/Loading'
 import { getExpenses, createExpense, updateExpense, deleteExpense } from '@/services/expenses'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatDate, formatCurrency, getDateRange } from '@/lib/utils'
 import { useApp } from '@/context/AppContext'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { Expense } from '@/types'
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 
 const expenseSchema = z.object({
   date: z.string().min(1, 'Date is required'),
@@ -52,10 +53,18 @@ const catColors: Record<string, string> = {
   Miscellaneous: 'bg-gray-100 text-gray-700',
 }
 
+const periodOptions = [
+  { value: 'all', label: 'All Time' },
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+]
+
 export function Expenses() {
   const { settings } = useApp()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [search, setSearch] = useState('')
+  const [period, setPeriod] = useState('all')
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -74,12 +83,33 @@ export function Expenses() {
 
   useEffect(() => {
     loadExpenses()
-  }, [search])
+  }, [search, period])
 
   async function loadExpenses() {
     try {
       setLoading(true)
-      const data = await getExpenses(search || undefined)
+      let data = await getExpenses(search || undefined)
+
+      if (period !== 'all') {
+        const now = new Date()
+        let from: Date
+        let to: Date
+        if (period === 'today') {
+          from = startOfDay(now)
+          to = endOfDay(now)
+        } else if (period === 'week') {
+          from = startOfWeek(now, { weekStartsOn: 1 })
+          to = endOfWeek(now, { weekStartsOn: 1 })
+        } else {
+          from = startOfMonth(now)
+          to = endOfMonth(now)
+        }
+        data = data.filter((e) => {
+          const d = new Date(e.date)
+          return d >= from && d <= to
+        })
+      }
+
       setExpenses(data)
     } catch {
       console.error('Failed to load expenses')
@@ -144,7 +174,7 @@ export function Expenses() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Expenses</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Expenses</h1>
           <p className="text-sm text-gray-500 mt-1">
             Total: {formatCurrency(totalExpenses, settings.currency)}
           </p>
@@ -154,7 +184,18 @@ export function Expenses() {
         </Button>
       </div>
 
-      <SearchInput value={search} onChange={setSearch} placeholder="Search by category or description..." />
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <SearchInput value={search} onChange={setSearch} placeholder="Search by category or description..." />
+        </div>
+        <div className="w-36">
+          <Select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            options={periodOptions}
+          />
+        </div>
+      </div>
 
       {loading ? (
         <Loading />
@@ -231,7 +272,7 @@ export function Expenses() {
         onClose={() => setDeleteOpen(false)}
         onConfirm={confirmDelete}
         title="Delete Expense"
-        message={`Are you sure you want to delete this expense?`}
+        message="Are you sure you want to delete this expense?"
         loading={saving}
       />
     </div>

@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Search, Minus, Plus as PlusIcon } from 'lucide-react'
-import { Card } from '@/components/ui/Card'
+import { Plus, Trash2, Search, Minus, Plus as PlusIcon, ArrowLeft } from 'lucide-react'
+import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Modal } from '@/components/ui/Modal'
-import { SearchInput } from '@/components/ui/SearchInput'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Loading } from '@/components/ui/Loading'
-import { getVisits, createVisit, deleteVisit } from '@/services/visits'
+import { Select } from '@/components/ui/Select'
+import { getVisits, createVisit, deleteVisit, getCustomerVisits } from '@/services/visits'
 import { getCustomers, createCustomer } from '@/services/customers'
 import { getServices } from '@/services/services'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { useApp } from '@/context/AppContext'
 import type { Visit, Customer, Service } from '@/types'
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 
 const genderOptions = [
   { value: 'Male', label: 'Male' },
@@ -21,10 +22,17 @@ const genderOptions = [
   { value: 'Other', label: 'Other' },
 ]
 
+const periodOptions = [
+  { value: 'all', label: 'All Visits' },
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+]
+
 export function Visits() {
   const { settings } = useApp()
   const [visits, setVisits] = useState<Visit[]>([])
-  const [search, setSearch] = useState('')
+  const [period, setPeriod] = useState('all')
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -42,20 +50,47 @@ export function Visits() {
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
   const [remarks, setRemarks] = useState('')
 
+  const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null)
+  const [customerVisitHistory, setCustomerVisitHistory] = useState<Visit[]>([])
+
   useEffect(() => {
     loadVisits()
-  }, [search])
+  }, [period])
 
   async function loadVisits() {
     try {
       setLoading(true)
-      const data = await getVisits(search || undefined)
+      let data = await getVisits()
+
+      if (period !== 'all') {
+        const now = new Date()
+        let from: Date
+        let to: Date
+        if (period === 'today') {
+          from = startOfDay(now); to = endOfDay(now)
+        } else if (period === 'week') {
+          from = startOfWeek(now, { weekStartsOn: 1 }); to = endOfWeek(now, { weekStartsOn: 1 })
+        } else {
+          from = startOfMonth(now); to = endOfMonth(now)
+        }
+        data = data.filter((v) => {
+          const d = new Date(v.created_at)
+          return d >= from && d <= to
+        })
+      }
+
       setVisits(data)
     } catch {
       console.error('Failed to load visits')
     } finally {
       setLoading(false)
     }
+  }
+
+  async function viewCustomerProfile(customer: Customer) {
+    setViewingCustomer(customer)
+    const history = await getCustomerVisits(customer.id)
+    setCustomerVisitHistory(history)
   }
 
   async function openNewVisit() {
@@ -163,19 +198,77 @@ export function Visits() {
     }
   }
 
+  if (viewingCustomer) {
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => setViewingCustomer(null)}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Visits
+        </button>
+        <Card>
+          <CardHeader>
+            <CardTitle>{viewingCustomer.name}</CardTitle>
+          </CardHeader>
+          <div className="space-y-1 text-sm text-gray-600">
+            <p><strong>Mobile:</strong> {viewingCustomer.mobile}</p>
+            <p><strong>Gender:</strong> {viewingCustomer.gender}</p>
+            {viewingCustomer.address && <p><strong>Address:</strong> {viewingCustomer.address}</p>}
+            {viewingCustomer.notes && <p><strong>Notes:</strong> {viewingCustomer.notes}</p>}
+          </div>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Visit History ({customerVisitHistory.length})</CardTitle>
+          </CardHeader>
+          <div className="space-y-3">
+            {customerVisitHistory.length === 0 && <EmptyState title="No visits yet" />}
+            {customerVisitHistory.map((visit) => (
+              <div key={visit.id} className="border-b border-gray-50 pb-3 last:border-0">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-medium">{formatDate(visit.created_at)}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {visit.visit_services?.map((vs) => (
+                        <span key={vs.id} className="text-xs bg-pink-50 text-pink-600 px-2 py-0.5 rounded-full">
+                          {vs.service?.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold text-pink-600">
+                    {formatCurrency(visit.total_amount, settings.currency)}
+                  </span>
+                </div>
+                {visit.remarks && <p className="text-xs text-gray-400 mt-1">{visit.remarks}</p>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Visits</h1>
-          <p className="text-sm text-gray-500 mt-1">{visits.length} recent visits</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Visits</h1>
+          <p className="text-sm text-gray-500 mt-1">{visits.length} visits</p>
         </div>
         <Button onClick={openNewVisit}>
           <Plus className="h-4 w-4" /> New Visit
         </Button>
       </div>
 
-      <SearchInput value={search} onChange={setSearch} placeholder="Search by customer name..." />
+      <div className="w-44">
+          <Select
+            value={period}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setPeriod(e.target.value)}
+            options={periodOptions}
+          />
+      </div>
 
       {loading ? (
         <Loading />
@@ -186,24 +279,29 @@ export function Visits() {
           {visits.map((visit) => (
             <Card key={visit.id}>
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-gray-900">{visit.customer?.name || 'Unknown'}</p>
-                    <span className="text-xs text-gray-400">{formatDate(visit.created_at)}</span>
-                  </div>
+                <div className="flex-1 min-w-0">
+                  <button
+                    onClick={() => visit.customer && viewCustomerProfile(visit.customer)}
+                    className="font-medium text-pink-600 hover:underline text-left"
+                  >
+                    {visit.customer?.name || 'Unknown'}
+                  </button>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {visit.visit_services?.map((vs) => (
-                      <span key={vs.id} className="text-xs bg-pink-50 text-pink-600 px-2 py-0.5 rounded-full">
+                      <span key={vs.id} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                         {vs.service?.name}
                       </span>
                     ))}
                   </div>
                   {visit.remarks && <p className="text-xs text-gray-400 mt-1">{visit.remarks}</p>}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-pink-600">
-                    {formatCurrency(visit.total_amount, settings.currency)}
-                  </span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-pink-600 block">
+                      {formatCurrency(visit.total_amount, settings.currency)}
+                    </span>
+                    <span className="text-xs text-gray-400">{formatDate(visit.created_at)}</span>
+                  </div>
                   <button
                     onClick={() => {
                       setDeleting(visit)
@@ -221,7 +319,7 @@ export function Visits() {
       )}
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New Visit" size="lg">
-        <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-4">
+        <div className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-gray-700">Customer</label>
@@ -381,11 +479,11 @@ export function Visits() {
             <Button variant="secondary" type="button" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" loading={saving} disabled={selectedServices.length === 0}>
+            <Button onClick={onSubmit} loading={saving} disabled={selectedServices.length === 0}>
               Save Visit
             </Button>
           </div>
-        </form>
+        </div>
       </Modal>
 
       <ConfirmDialog
